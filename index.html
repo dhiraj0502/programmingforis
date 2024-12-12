@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            margin-top: 20px;
+        }
+        .form-section {
+            display: none;
+        }
+        form {
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            width: 300px;
+            border-radius: 10px;
+        }
+        input, select {
+            display: block;
+            margin: 10px auto;
+            padding: 10px;
+            width: 90%; /* Ensure consistent width */
+            box-sizing: border-box; /* Prevent padding from affecting the width */
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .error {
+            color: red;
+        }
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #007BFF;
+            color: white;
+        }
+        .delete-btn {
+            color: red;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dashboard</h1>
+        <!-- Switch Buttons -->
+        <div>
+            <button onclick="showForm('adminLogin')">Admin Login</button>
+            <button onclick="showForm('employeeLogin')">Employee Login</button>
+        </div>
+
+        <!-- Admin Login Form -->
+        <div id="adminLogin" class="form-section">
+            <h2>Admin Login</h2>
+            <form id="adminLoginForm">
+                <input type="text" id="adminUsername" placeholder="Admin Username" required>
+                <input type="password" id="adminPassword" placeholder="Admin Password" required>
+                <button type="submit">Login</button>
+            </form>
+            <div id="adminLoginError" class="error"></div>
+        </div>
+
+        <!-- Employee Login Form -->
+        <div id="employeeLogin" class="form-section">
+            <h2>Employee Login</h2>
+            <form id="employeeLoginForm">
+                <input type="text" id="employeeUsername" placeholder="Employee Username" required>
+                <input type="password" id="employeePassword" placeholder="Employee Password" required>
+                <button type="submit">Login</button>
+            </form>
+            <div id="employeeLoginError" class="error"></div>
+        </div>
+
+        <!-- Add Employee Section (Admin Only) -->
+        <div id="addEmployeeSection" class="form-section">
+            <h2>Add Employee</h2>
+            <form id="addEmployeeForm">
+                <input type="text" id="name" placeholder="Name" required>
+                <select id="position" required>
+                    <option value="">Select Position</option>
+                    <option value="Software Engineer">Software Engineer</option>
+                    <option value="Devops Engineer">Devops Engineer</option>
+                    <option value="Engineering Manager">Engineering Manager</option>
+                    <option value="Support Engineer">Support Engineer</option>
+                    <option value="Other">Other (Specify)</option>
+                </select>
+                <input type="text" id="customPosition" placeholder="Custom Position (if any)">
+                <input type="number" id="salary" placeholder="Salary" required>
+                <input type="text" id="empUsername" placeholder="Employee Username" required>
+                <input type="password" id="empPassword" placeholder="Employee Password" required>
+                <button type="submit">Add Employee</button>
+            </form>
+            <div id="addEmployeeError" class="error"></div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="adminDashboard" class="form-section">
+            <h2>Admin Dashboard</h2>
+            <div id="employeeListSection">
+                <h3>Employee List</h3>
+
+                <!-- Filter by position -->
+                <label for="positionFilter">Filter by Position: </label>
+                <select id="positionFilter">
+                    <option value="">All Positions</option>
+                    <option value="Software Engineer">Software Engineer</option>
+                    <option value="Devops Engineer">Devops Engineer</option>
+                    <option value="Engineering Manager">Engineering Manager</option>
+                    <option value="Support Engineer">Support Engineer</option>
+                </select>
+
+                <table id="employeeListTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Position</th>
+                            <th>Salary</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Employee list will be dynamically inserted here -->
+                    </tbody>
+                </table>
+                <button onclick="showForm('addEmployeeSection')">Add New Employee</button>
+            </div>
+        </div>
+
+        <!-- Employee Dashboard -->
+        <div id="employeeDashboard" class="form-section">
+            <h2>Employee Dashboard</h2>
+            <div id="employeeDetails">
+                <table id="employeeTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Position</th>
+                            <th>Salary</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Employee details will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Function to show specific form
+        function showForm(formId) {
+            document.querySelectorAll('.form-section').forEach(section => section.style.display = 'none');
+            document.getElementById(formId).style.display = 'block';
+        }
+
+        // Admin Login Logic
+        document.getElementById('adminLoginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('adminUsername').value;
+            const password = document.getElementById('adminPassword').value;
+
+            const response = await fetch('http://localhost:3000/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                localStorage.setItem('token', data.token);
+                alert('Admin login successful!');
+                showForm('adminDashboard'); // Show Admin Dashboard
+                fetchEmployeeList(); // Fetch the employee list
+            } else {
+                document.getElementById('adminLoginError').innerText = data.message;
+            }
+        });
+
+        // Employee Login Logic
+        document.getElementById('employeeLoginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('employeeUsername').value;
+            const password = document.getElementById('employeePassword').value;
+
+            const response = await fetch('http://localhost:3000/employee-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                localStorage.setItem('token', data.token);
+                alert('Employee login successful!');
+                showForm('employeeDashboard'); // Show Employee Dashboard
+
+                // Fetch employee details
+                const detailsResponse = await fetch('http://localhost:3000/employee-dashboard', {
+                    headers: { 'Authorization': `Bearer ${data.token}` }
+                });
+
+                const employeeDetails = await detailsResponse.json();
+
+                // Clear any existing table rows
+                const tableBody = document.querySelector('#employeeTable tbody');
+                tableBody.innerHTML = '';
+
+                // Insert employee details into the table
+                const row = tableBody.insertRow();
+                row.insertCell(0).textContent = employeeDetails.name;
+                row.insertCell(1).textContent = employeeDetails.position;
+                row.insertCell(2).textContent = employeeDetails.salary;
+            } else {
+                document.getElementById('employeeLoginError').innerText = data.message;
+            }
+        });
+
+        // Admin Add Employee Logic
+        document.getElementById('addEmployeeForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Please log in as admin first');
+                return;
+            }
+
+            const name = document.getElementById('name').value;
+            let position = document.getElementById('position').value;
+            const customPosition = document.getElementById('customPosition').value;
+            const salary = document.getElementById('salary').value;
+            const username = document.getElementById('empUsername').value;
+            const password = document.getElementById('empPassword').value;
+
+            if (position === "Other" && customPosition) {
+                position = customPosition;
+            }
+
+            const response = await fetch('http://localhost:3000/admin/add-employee', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // Send token here
+                },
+                body: JSON.stringify({ name, position, salary, username, password })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                alert(data.message);
+                document.getElementById('addEmployeeForm').reset();
+                fetchEmployeeList(); // Refresh the employee list
+            } else {
+                document.getElementById('addEmployeeError').innerText = data.message;
+            }
+        });
+
+        // Auto-refresh interval (in milliseconds)
+const REFRESH_INTERVAL = 5000; // Adjust the interval as needed
+
+// Fetch Employee List for Admin
+async function fetchEmployeeList() {
+    const token = localStorage.getItem('token');
+    const positionFilter = document.getElementById('positionFilter').value;
+
+    const response = await fetch(`http://localhost:3000/admin/employee-list?position=${positionFilter}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+        const tableBody = document.querySelector('#employeeListTable tbody');
+        tableBody.innerHTML = '';
+
+        data.forEach(employee => {
+            if (employee.position === positionFilter || positionFilter === '') {
+                const row = tableBody.insertRow();
+                row.insertCell(0).textContent = employee.name;
+                row.insertCell(1).textContent = employee.position;
+                row.insertCell(2).textContent = employee.salary;
+
+                const deleteCell = row.insertCell(3);
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.classList.add('delete-btn');
+                deleteBtn.onclick = () => deleteEmployee(employee.id);
+                deleteCell.appendChild(deleteBtn);
+            }
+        });
+    } else {
+        console.error('Failed to fetch employee list:', data.message);
+    }
+}
+
+// Initial fetch and setup auto-refresh
+fetchEmployeeList();
+setInterval(fetchEmployeeList, REFRESH_INTERVAL);
+
+
+        // Delete Employee
+        async function deleteEmployee(id) {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`http://localhost:3000/admin/delete-employee/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                alert(data.message);
+                fetchEmployeeList(); // Refresh the employee list
+            } else {
+                alert(data.message);
+            }
+        }
+    </script>
+</body>
+</html>
