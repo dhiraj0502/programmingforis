@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const mysql = require('mysql2/promise'); // Use mysql2's promise support
+const mysql = require('mysql2/promise'); 
 const cors = require('cors');
 const path = require('path');
 const jwt = require('jsonwebtoken');
@@ -111,6 +111,34 @@ app.post('/admin/add-employee', authenticateToken, async (req, res) => {
     }
 });
 
+
+
+// Admin add employee route
+app.patch('/admin/update-employee', authenticateToken, async (req, res) => {
+  if (!req.user.isAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  const { name, position, salary, username } = req.body;
+
+  try {
+    const query = `
+    UPDATE employees
+    SET name = ?, position = ?, salary = ?
+    WHERE username = ?
+`;
+      await db.execute(query, [name, position, salary, username]);
+      res.status(201).json({ message: 'Employee updated successfully' });
+  } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY') {
+          res.status(400).json({ message: 'Username already exists' });
+      } else {
+          console.error('Database insertion error:', err);
+          res.status(500).json({ message: 'Database insertion error' });
+      }
+  }
+});
+
 // Employee dashboard route
 app.get('/employee-dashboard', authenticateToken, async (req, res) => {
     const username = req.user.username;
@@ -161,6 +189,88 @@ app.delete('/admin/delete-employee/:id', authenticateToken, async (req, res) => 
         res.status(500).json({ message: 'Database query error' });
     }
 });
+
+
+
+// Admin get by employee list route
+app.get('/admin/employee-list', authenticateToken, async (req, res) => {
+  if (!req.user.isAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  try {
+      const [results] = await db.query('SELECT * FROM employees');
+      res.json(results);
+  } catch (err) {
+      console.error('Database query error:', err);
+      res.status(500).json({ message: 'Database query error' });
+  }
+});
+
+// Admin get employee by ID route
+app.get('/admin/employee/:id', authenticateToken, async (req, res) => {
+  if (!req.user.isAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  const { id } = req.params;  // Extract the 'id' from the request parameters
+
+  try {
+      // Query the database for the employee with the given ID
+      const [results] = await db.query('SELECT * FROM employees WHERE id = ?', [id]);
+
+      // If no employee is found, return an error
+      if (results.length === 0) {
+          return res.status(404).json({ message: 'Employee not found' });
+      }
+
+      // Return the employee data
+      res.json(results[0]);
+  } catch (err) {
+      console.error('Database query error:', err);
+      res.status(500).json({ message: 'Database query error' });
+  }
+});
+
+// Admin update employee route
+app.put('/admin/update-employee/:id', authenticateToken, async (req, res) => {
+  if (!req.user.isAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  const { id } = req.params;  // Extract the employee ID from the request params
+  const { name, position, salary, username, password } = req.body;  // Get the updated details from the request body
+
+  try {
+      // Check if employee exists before updating
+      const [employeeResults] = await db.query('SELECT * FROM employees WHERE id = ?', [id]);
+      if (employeeResults.length === 0) {
+          return res.status(404).json({ message: 'Employee not found' });
+      }
+
+      // Update the employee details
+      const updateQuery = `
+        UPDATE employees 
+        SET name = ?, position = ?, salary = ?, username = ?
+        WHERE id = ?
+      `;
+
+      // Execute the update query
+      const [updateResult] = await db.query(updateQuery, [name, position, salary, username, id]);
+
+      // If the update was successful, send a success message
+      if (updateResult.affectedRows > 0) {
+        console.log(updateResult);
+          return res.json({ message: 'Employee updated successfully' });
+      } else {
+          return res.status(400).json({ message: 'Failed to update employee' });
+      }
+  } catch (err) {
+      console.error('Database query error:', err);
+      res.status(500).json({ message: 'Database query error' });
+  }
+});
+
 
 // Catch-all route for 404 errors
 app.use((req, res, next) => {
