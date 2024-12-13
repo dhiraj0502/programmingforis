@@ -119,6 +119,26 @@
             <div id="addEmployeeError" class="error"></div>
         </div>
 
+        <!-- Update Employee Section (Initially Hidden) -->
+<div id="updateEmployeeSection" class="form-section">
+    <h2>Update Employee</h2>
+    <form id="updateEmployeeForm">
+        <input type="text" id="updatename" placeholder="Name" required>
+        <select id="updateposition" required>
+            <option value="">Select Position</option>
+            <option value="Software Engineer">Software Engineer</option>
+            <option value="Devops Engineer">Devops Engineer</option>
+            <option value="Engineering Manager">Engineering Manager</option>
+            <option value="Support Engineer">Support Engineer</option>
+            <option value="Other">Other (Specify)</option>
+        </select>
+        <input type="number" id="updatesalary" placeholder="Salary" required>
+        <input type="text" id="updateempUsername" placeholder="Employee Username" required>
+        <button type="submit">Update Employee</button>
+    </form>
+    <div id="updateEmployeeError" class="error"></div>
+</div>
+
         <!-- Admin Dashboard -->
         <div id="adminDashboard" class="form-section">
             <h2>Admin Dashboard</h2>
@@ -310,11 +330,21 @@ async function fetchEmployeeList() {
                 row.insertCell(2).textContent = employee.salary;
 
                 const deleteCell = row.insertCell(3);
+
                 const deleteBtn = document.createElement('button');
                 deleteBtn.textContent = 'Delete';
                 deleteBtn.classList.add('delete-btn');
                 deleteBtn.onclick = () => deleteEmployee(employee.id);
+
+
+                const updateButton = document.createElement('button');
+                updateButton.textContent = 'Update';
+                // deleteBtn.classList.add('delete-btn');
+                updateButton.onclick = () => updateEmployee(employee.id);
+
+
                 deleteCell.appendChild(deleteBtn);
+                deleteCell.appendChild(updateButton);
             }
         });
     } else {
@@ -345,6 +375,89 @@ setInterval(fetchEmployeeList, REFRESH_INTERVAL);
                 alert(data.message);
             }
         }
+
+                
+        // Update Employee Logic
+async function updateEmployee(id) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        alert('Please log in as admin first');
+        return;
+    }
+
+    console.log("UPDATE SECTION.")
+    // Fetch the current employee details using the employee's ID
+    const response = await fetch(`http://localhost:3000/admin/employee/${id}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    const employeeData = await response.json();
+    console.log("GET CALL", employeeData)
+    console.log("name ", employeeData.name)
+    if (response.ok) {
+        console.log(document.getElementById('name').value)
+        console.log(employeeData.name)
+        // Populate the update form with the current employee data
+        document.getElementById('updatename').value = employeeData.name;
+        document.getElementById('updateposition').value = employeeData.position;
+        document.getElementById('updatesalary').value = employeeData.salary;
+        document.getElementById('updateempUsername').value = employeeData.username;
+
+        // Hide "Add Employee" and show the form for updating
+        document.getElementById('addEmployeeSection').style.display = 'none';
+        document.getElementById('updateEmployeeSection').style.display = 'block';
+
+        // Modify the form submission to update the employee
+        const updateForm = document.getElementById('updateEmployeeForm');
+        updateForm.onsubmit = async function (event) {
+            event.preventDefault();
+
+            console.log("updated salary, ", document.getElementById('updatesalary').value)
+            const updatedName = document.getElementById('updatename').value;
+            const updatedPosition = document.getElementById('updateposition').value;
+            const updatedSalary = document.getElementById('updatesalary').value;
+            const updatedUsername = document.getElementById('updateempUsername').value;
+
+            console.log("UPDATE REQUEST ->", JSON.stringify({
+                    name: updatedName,
+                    position: updatedPosition,
+                    salary: updatedSalary,
+                    username: updatedUsername
+                }))
+            // Send the updated data to the server
+            const updateResponse = await fetch(`http://localhost:3000/admin/update-employee/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: updatedName,
+                    position: updatedPosition,
+                    salary: updatedSalary,
+                    username: updatedUsername
+                })
+            });
+
+            const updateData = await updateResponse.json();
+
+            if (updateResponse.ok) {
+                alert('Employee updated successfully');
+                document.getElementById('updateEmployeeSection').style.display = 'none';
+                document.getElementById('addEmployeeSection').style.display = 'none'; // Hide form
+                fetchEmployeeList(); // Refresh the employee list
+            } else {
+                alert(updateData.message);
+            }
+        };
+    } else {
+        alert('Failed to fetch employee details');
+    }
+}
+
     </script>
 </body>
 </html>
